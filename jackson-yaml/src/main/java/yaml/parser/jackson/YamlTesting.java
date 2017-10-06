@@ -4,6 +4,8 @@ import static com.jayway.jsonpath.Filter.filter;
 
 import java.io.File;
 
+import org.json.JSONObject;
+
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
 import com.jayway.jsonpath.Configuration;
@@ -23,17 +25,28 @@ public class YamlTesting {
             //String response ="{'transactionDetailExtn':{'correlationId':'1c750328-67ed-11e7-ab1b-bb8a9f4a485f'}}";
         	long startTime=System.currentTimeMillis();
         	String response =  mapper.readTree(new File("response.yaml")).toString();
+        	//MyJSONFlattner.listJson(new JSONObject(response));
         	System.out.println(response);
-        	Object document = Configuration.defaultConfiguration().jsonProvider().parse(response);
-        	
-        	Filter liabilityFilter = filter(where("accountStatusType").is("OPEN").and("accountOwnershipType").ne("TERMINATED"));
-        	
-        	Object liabilities =JsonPath.read(document, "$.response[0].responsedata[0].creditresponse.creditliability[?]",liabilityFilter);
-        	int length =JsonPath.read(liabilities,"$.length()");
         	
         	Configuration conf = Configuration.builder().options(Option.DEFAULT_PATH_LEAF_TO_NULL).build();
         	ParseContext jsonParser = JsonPath.using(conf);
+        	
+        	Object document = Configuration.defaultConfiguration().jsonProvider().parse(response);
+        	
+        	Object creditresponse =JsonPath.read(document, "$.response[0].responsedata[0].creditresponse");
+        	
+        	
+        	Object regulatoryproducts = jsonParser.parse(creditresponse).read("$.regulatoryproduct[?].resultStatusType",
+        														       filter(where("sourceType").is("OFAC")));
+        	System.out.println(regulatoryproducts);
+        	
+        	Filter liabilityFilter = filter(where("accountStatusType").is("OPEN").and("accountOwnershipType").ne("TERMINATED"));
+        	Object liabilities =JsonPath.read(document, "$.response[0].responsedata[0].creditresponse.creditliability[?]",liabilityFilter);
+        	int length =JsonPath.read(liabilities,"$.length()");
+        	
+        	
         	DocumentContext liabilityDoc = jsonParser.parse(liabilities);
+        	
         	
         	for(int i=0;i<length;i++){
         		
